@@ -127,3 +127,8 @@ class Graph:
         for node, node_copy in zip(self.end_nodes, graph.end_nodes):
             node_copy.edges[0].value = node.edges[0].value
         return graph
+
+    def update_end_nodes(self, end_node_values):
+        """ Resets the graph's end node values. """
+        for node, value in zip(self.end_nodes, end_node_values):
+            node.edges[0].value = value

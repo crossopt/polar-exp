@@ -1,5 +1,5 @@
 import unittest
-from initialize import get_endpoints, get_gates
+from initialize import get_endpoints, get_gates, get_all_possible_configs
 
 
 class TestGetGates(unittest.TestCase):
@@ -28,6 +28,22 @@ class TestGetEndpoints(unittest.TestCase):
 
     def test_amountIsCorrect_power3_prob5(self):
         self.assertEqual(['*', '*', '*', '*', '?', '?', '?', '?'], sorted(get_endpoints(3, 0.5)))
+
+
+class TestGetAllPossibleConfigs(unittest.TestCase):
+    def test_configListIsCorrect_power2_prob1(self):
+        self.assertEqual([['*', '*', '*', '?'],
+                          ['*', '*', '?', '*'],
+                          ['*', '?', '*', '*'],
+                          ['?', '*', '*', '*']], sorted(get_all_possible_configs(2, 0.1)))
+
+    def test_configListIsCorrect_power2_prob5(self):
+        self.assertEqual([['*', '*', '?', '?'],
+                          ['*', '?', '*', '?'],
+                          ['*', '?', '?', '*'],
+                          ['?', '*', '*', '?'],
+                          ['?', '*', '?', '*'],
+                          ['?', '?', '*', '*']], sorted(get_all_possible_configs(2, 0.5)))
 
 
 if __name__ == '__main__':
