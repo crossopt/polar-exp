@@ -127,7 +127,7 @@ class TestVerticalRule(unittest.TestCase):
             edge.value = value
         self.assertFalse(vertical_rule(self.nodes[0]))
         self.assertFalse(vertical_rule(self.nodes[2]))
-        for edge, value in zip(self.edges, ['?', '*', '*', '*', '?']):
+        for edge, value in zip(self.edges, ['*', '*', '*', '*', '*']):
             self.assertEqual(value, edge.value)
 
     def test_verticalRuleEdgeIsNotPropagated(self):
@@ -191,7 +191,7 @@ class TestLeftRule(unittest.TestCase):
         for edge, value in zip(self.edges,  ['?', '?', '*', '*', '?']):
             edge.value = value
         self.assertTrue(left_rule(self.nodes[0]))
-        for edge, value in zip(self.edges,  ['*', '?', '*', '*', '?']):
+        for edge, value in zip(self.edges,  ['*', '*', '*', '*', '*']):
             self.assertEqual(value, edge.value)
 
     def test_leftRuleEdgeIsPropagated_simpleLower(self):
@@ -254,7 +254,7 @@ class TestRightRule(unittest.TestCase):
         for edge, value in zip(self.edges,  ['*', '?', '*', '?', '?']):
             edge.value = value
         self.assertTrue(right_rule(self.nodes[0]))
-        for edge, value in zip(self.edges,  ['*', '?', '*', '*', '?']):
+        for edge, value in zip(self.edges,  ['*', '*', '*', '*', '*']):
             self.assertEqual(value, edge.value)
 
     def test_rightRuleEdgeIsPropagated_simpleLower(self):

@@ -11,8 +11,9 @@ class Node:
         LOWER = 1
         UPPER = 2
 
-    def __init__(self, node_type=NodeType.EDGE):
+    def __init__(self, label='', node_type=NodeType.EDGE):
         self.type = node_type
+        self.label = label
         self.edges = []  # Edges are stored in order [left, vertical, right].
 
     def add_edge(self, edge):
@@ -74,7 +75,7 @@ class Graph:
         # Create the original gates.
         self.k = k
         self.p = p
-        self.start_nodes, self.inner_nodes, self.end_nodes, self.nodes_by_layer = self.init_structure()
+        self.start_nodes, self.inner_nodes, self.end_nodes, self.nodes_by_layer, self.edges = self.init_structure()
         # Set the original values for the edges.
         for node, value in zip(self.start_nodes, get_gates(k, p)):
             node.edges[0].value = value
@@ -82,7 +83,8 @@ class Graph:
             node.edges[0].value = value
 
     def init_structure(self):
-        start_nodes = [Node() for i in range(2 ** self.k)]
+        start_nodes = [Node('start {}'.format(i)) for i in range(2 ** self.k)]
+        edges = []
         inner_nodes = []
         nodes_by_layer = [start_nodes]
         current_layer = [i for i in start_nodes]
@@ -92,26 +94,26 @@ class Graph:
                 current_start = 2 ** (layer + 1) * group_start
                 for gate_number in range(2 ** layer):
                     # Create new gate and add its edges to the graph.
-                    new_top_gate = Node(node_type=Node.NodeType.UPPER)
-                    new_bottom_gate = Node(node_type=Node.NodeType.LOWER)
+                    top_gate_number = gate_number + current_start
+                    bottom_gate_number = gate_number + current_start + 2 ** layer
+                    new_top_gate = Node('up {} l{}'.format(top_gate_number, layer), node_type=Node.NodeType.UPPER)
+                    new_bottom_gate = Node('lo {} l{}'.format(bottom_gate_number, layer), node_type=Node.NodeType.LOWER)
                     inner_nodes.append(new_top_gate)
                     inner_nodes.append(new_bottom_gate)
                     nodes_by_layer[-1].append(new_top_gate)
                     nodes_by_layer[-1].append(new_bottom_gate)
-                    top_gate_number = gate_number + current_start
-                    bottom_gate_number = gate_number + current_start + 2 ** layer
-                    top_edge = Edge(current_layer[top_gate_number], new_top_gate)
-                    bottom_edge = Edge(current_layer[bottom_gate_number], new_bottom_gate)
-                    gate_edge = Edge(new_top_gate, new_bottom_gate)
+                    edges.append(Edge(current_layer[top_gate_number], new_top_gate))
+                    edges.append(Edge(current_layer[bottom_gate_number], new_bottom_gate))
+                    edges.append(Edge(new_top_gate, new_bottom_gate))
                     current_layer[top_gate_number] = new_top_gate
                     current_layer[bottom_gate_number] = new_bottom_gate
 
         # Create the endpoints.
-        end_nodes = [Node() for i in range(2 ** self.k)]
+        end_nodes = [Node('end {}'.format(i)) for i in range(2 ** self.k)]
         for gate, end_gate in zip(current_layer, end_nodes):
-            edge = Edge(gate, end_gate)
+            edges.append(Edge(gate, end_gate))
         nodes_by_layer.append(end_nodes)
-        return start_nodes, inner_nodes, end_nodes, nodes_by_layer
+        return start_nodes, inner_nodes, end_nodes, nodes_by_layer, edges
 
     def inner_layers(self):
         """ Returns a list containing only the inner layers of the encoding graph. """
@@ -121,7 +123,7 @@ class Graph:
         """ Returns a deep copy of the current graph's original state with the same outer edge values set. """
         graph = Graph(1, 1)
         graph.k, graph.p = self.k, self.p
-        graph.start_nodes, graph.inner_nodes, graph.end_nodes, graph.nodes_by_layer = self.init_structure()
+        graph.start_nodes, graph.inner_nodes, graph.end_nodes, graph.nodes_by_layer, graph.edges = self.init_structure()
         for node, node_copy in zip(self.start_nodes, graph.start_nodes):
             node_copy.edges[0].value = node.edges[0].value
         for node, node_copy in zip(self.end_nodes, graph.end_nodes):

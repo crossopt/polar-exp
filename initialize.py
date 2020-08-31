@@ -56,3 +56,12 @@ def get_all_possible_configs(k, p):
             endpoints[passed_element] = '*'
         configs.append(endpoints)
     return configs
+
+
+def get_p_list(k):
+    """ Returns a list of error probability values that cover all of the various possible amounts of frozen bits np. """
+    probabilities = []
+    for passed_amount in range(2 ** k + 1):
+        prob = 1 - passed_amount / 2 ** k - 10 ** (-6)
+        probabilities.append(prob)
+    return probabilities

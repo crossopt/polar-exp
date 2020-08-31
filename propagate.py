@@ -1,5 +1,12 @@
 """ Module for the various strategies of belief propagation. """
-from rules import relevant_rule, left_rule, right_rule, vertical_rule
+from rules import relevant_rule, left_rule, right_rule
+from graph import Node
+
+
+class Counter:
+    def __init__(self):
+        self.steps = 0
+        self.parallel_steps = 0
 
 
 def was_propagation_finished(propagated_graph, graph):
@@ -32,24 +39,66 @@ def lazy_propagate(graph):
             was_success = relevant_rule(node) or was_success
 
 
-def flooding_propagate(graph, stopping_condition):
-    """ Applies the propagation rules using flooding propagation until stopping_condition is satisfied.
+def naive_propagate(graph, stopping_condition):
+    """ Applies the propagation rules using naive propagation until stopping_condition is satisfied.
 
-    In a single iteration, flooding propagation applies the relevant rules in all vertices simultaneously in parallel.
+    In a single iteration, naive propagation applies the relevant rules in all vertices simultaneously in parallel.
     Returns the amount of steps (left or right) that the propagation took, or None if the propagation failed.
     """
-    count = 0
+    counter = Counter()
     while not stopping_condition(graph):
         nodes_to_update = []
+        counter.parallel_steps += 1
         for node in graph.inner_nodes:
             # Add node to a list of nodes to update to mock the parallel execution of the rule checks.
-            count += 2
+            counter.steps += 2
             if left_rule(node, apply_propagate=False) or right_rule(node, apply_propagate=False):
                 nodes_to_update.append(node)
         for node in nodes_to_update:
             left_rule(node)
             right_rule(node)
-    return count
+    return counter
+
+
+def flooding_propagate(graph, stopping_condition):
+    """ Applies the propagation rules using flooding propagation until stopping_condition is satisfied.
+
+    In a single iteration, flooding propagation applies the relevant rules in all vertices the neighbors of which had
+    been updated last iteration simultaneously in parallel.
+    Returns the amount of steps (left or right) that the propagation took, or None if the propagation failed.
+    """
+    counter = Counter()
+    newly_set_edges = []
+    for node in graph.start_nodes:
+        for edge in node.edges:
+            newly_set_edges.append(edge)
+    for node in graph.end_nodes:
+        for edge in node.edges:
+            newly_set_edges.append(edge)
+    while not stopping_condition(graph):
+        nodes_to_update = []
+        counter.parallel_steps += 1
+        old_states = [(edge, edge.value) for edge in graph.edges]
+        for node in graph.inner_nodes:
+            is_node_interesting = False
+            for edge in newly_set_edges:
+                if node in edge.nodes or node.vertical().other(node) in edge.nodes:
+                    is_node_interesting = True
+            if not is_node_interesting:
+                continue
+            # Add node to a list of nodes to update to mock the parallel execution of the rule checks.
+            counter.steps += 2
+            if left_rule(node, apply_propagate=False) or right_rule(node, apply_propagate=False):
+                nodes_to_update.append(node)
+        for node in nodes_to_update:
+            left_rule(node)
+            right_rule(node)
+        new_states = [(edge, edge.value) for edge in graph.edges]
+        newly_set_edges = []
+        for old_state, new_state in zip(old_states, new_states):
+            if old_state[1] != new_state[1]:
+                newly_set_edges.append(old_state[0])
+    return counter
 
 
 def scheduling_conventional_propagate(graph, stopping_condition):
@@ -59,18 +108,19 @@ def scheduling_conventional_propagate(graph, stopping_condition):
     relevant rules in all vertices in a layer simultaneously.
     Returns the amount of steps (left or right) that the propagation took, or None if the propagation failed.
     """
-    count = 0
+    counter = Counter()
     while not stopping_condition(graph):
         for layer in graph.inner_layers():
+            counter.parallel_steps += 1
             nodes_to_update = []
             for node in layer:
-                count += 2
+                counter.steps += 2
                 if left_rule(node, apply_propagate=False) or right_rule(node, apply_propagate=False):
                     nodes_to_update.append(node)
             for node in nodes_to_update:
                 left_rule(node)
                 right_rule(node)
-    return count
+    return counter
 
 
 def scheduling_round_trip_propagate(graph, stopping_condition):
@@ -81,22 +131,59 @@ def scheduling_round_trip_propagate(graph, stopping_condition):
     iterations it applies all of the right-rules to update the right edges' values for the vertices of the layer.
     Returns the amount of steps (left or right) that the propagation took, or None if the propagation failed.
     """
-    count = 0
+    counter = Counter()
     while not stopping_condition(graph):
         for layer in graph.inner_layers():
+            counter.parallel_steps += 1
             nodes_to_update = []
             for node in layer:
-                count += 1
+                counter.steps += 1
                 if left_rule(node, apply_propagate=False):
                     nodes_to_update.append(node)
             for node in nodes_to_update:
                 left_rule(node)
         for layer in graph.inner_layers():
+            counter.parallel_steps += 1
             nodes_to_update = []
             for node in layer:
-                count += 1
+                counter.steps += 1
                 if right_rule(node, apply_propagate=False):
                     nodes_to_update.append(node)
             for node in nodes_to_update:
                 right_rule(node)
-    return count
+    return counter
+
+
+def successive_cancellation_propagate(graph, stopping_condition):
+    """ Applies the propagation rules using successive cancellation propagation until stopping_condition is satisfied.
+
+    Successive cancellation has no iterations per se. It recursively decodes the whole graph in O(n log n) steps.
+    Returns the amount of steps (left or right) that the propagation took, or None if the propagation failed.
+    """
+    counter = Counter()
+
+    def apply_successive_cancellation(node_list):
+        if not node_list:
+            return
+        upper_nodes = []
+        lower_nodes = []
+        counter.parallel_steps += 1  # Left updates can be parallel here
+        for node in node_list:
+            if node.type != Node.NodeType.EDGE:
+                counter.steps += 1
+                left_rule(node)
+            next_node = node.left().other(node)
+            if next_node.type == Node.NodeType.UPPER:
+                upper_nodes.append(next_node)
+            elif next_node.type == Node.NodeType.LOWER:
+                lower_nodes.append(next_node)
+        apply_successive_cancellation(upper_nodes)
+        apply_successive_cancellation(lower_nodes)
+        counter.parallel_steps += 1  # Right updates can be parallel here
+        for node in node_list:
+            if node.type != Node.NodeType.EDGE:
+                counter.steps += 1
+                right_rule(node)
+
+    apply_successive_cancellation(graph.end_nodes)
+    return counter

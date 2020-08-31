@@ -28,6 +28,8 @@ def lower_rule(node, apply_propagate=True, _was_extra_propagation=False):
 
 def relevant_rule(node, apply_propagate=True, _was_extra_propagation=False):
     """ Applies the relevant rule for a node, depending on its type. Returns True on success. """
+    if node.type == Node.NodeType.EDGE:
+        return False
     rule = lower_rule if node.type == Node.NodeType.LOWER else upper_rule if node.type == Node.NodeType.UPPER else None
     return rule(node, apply_propagate=apply_propagate, _was_extra_propagation=_was_extra_propagation)
 
@@ -39,13 +41,14 @@ def vertical_rule(node, apply_propagate=True):
     vertical edges. This is currently possible via counting only left- and right- rule applications for non-scheduling
     propagation as well.
     """
-    if node.vertical().value == '?':
-        return relevant_rule(node.vertical().other(node), apply_propagate=apply_propagate)
-    return False
+    vertical_value = node.vertical().value
+    return relevant_rule(node.vertical().other(node), apply_propagate=apply_propagate) and vertical_value == '?'
 
 
 def left_rule(node, apply_propagate=True):
     """ The article's L-rule.  Applies the rule for a node to propagate its left edge. Returns True on success. """
+    if node.type == Node.NodeType.EDGE:
+        return False
     if node.left().value == '?':
         was_propagation = vertical_rule(node, apply_propagate=apply_propagate) and (not apply_propagate)
         return relevant_rule(node, apply_propagate=apply_propagate, _was_extra_propagation=was_propagation)
@@ -54,6 +57,8 @@ def left_rule(node, apply_propagate=True):
 
 def right_rule(node, apply_propagate=True):
     """ The article's R-rule. Applies the rule for a node to propagate its right edge. Returns True on success. """
+    if node.type == Node.NodeType.EDGE:
+        return False
     if node.right().value == '?':
         was_propagation = vertical_rule(node, apply_propagate=apply_propagate) and (not apply_propagate)
         return relevant_rule(node, apply_propagate=apply_propagate, _was_extra_propagation=was_propagation)
