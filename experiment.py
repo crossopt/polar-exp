@@ -100,7 +100,7 @@ def plot_graph(name, k, results):
              label='Successive cancellation')
 
     fig.suptitle(name)
-    step.set(ylabel='Average number of\nsteps')
+    step.set(ylabel='Average number of\noperations')
 
     parallel_step.plot(passed_amounts, [result.naive_result.parallel_steps for result in results], 'r',
                        label='Naive propagation')
@@ -131,7 +131,7 @@ def print_average_result_all(k, dbg=False):
         results.append(perform_average_computation_all(k, prob))
         if dbg:
             results[-1].print()
-    plot_graph('Polar encoding of {}-bit message'.format(2 ** k), k, results)
+    plot_graph('Polar encoding with block size {}'.format(2 ** k), k, results)
 
 
 def print_average_result_random(k, repeats, dbg=False):
@@ -142,10 +142,10 @@ def print_average_result_random(k, repeats, dbg=False):
         results.append(perform_average_computation_random(k, prob, repeats))
         if dbg:
             results[-1].print()
-    plot_graph('Polar encoding of {}-bit message, {} runs'.format(2 ** k, repeats), k, results)
+    plot_graph('Polar encoding with block size {}, {} runs'.format(2 ** k, repeats), k, results)
 
 
 if __name__ == '__main__':
     print(datetime.now())
     print_average_result_all(3)
-    # print_average_result_random(5, repeats=100)
+    print_average_result_random(5, repeats=100)

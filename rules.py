@@ -63,3 +63,67 @@ def right_rule(node, apply_propagate=True):
         was_propagation = vertical_rule(node, apply_propagate=apply_propagate) and (not apply_propagate)
         return relevant_rule(node, apply_propagate=apply_propagate, _was_extra_propagation=was_propagation)
     return False
+
+
+def any_rule(node, apply_propagate=True):
+    """ Applies either L-rule or R-rule. Returns True on success. """
+    return left_rule(node, apply_propagate) or right_rule(node, apply_propagate)
+
+
+def relevant_rule_list(node):
+    """ Applies the relevant rule for a node, depending on its type. Returns a list of nodes that the propagation has
+    changed enough that they may be interesting with the rules to apply to them. """
+    edge_states = [edge.value for edge in node.edges]
+    relevant_rule(node, apply_propagate=True, _was_extra_propagation=False)
+    node_list = []
+    for edge, old_state in zip(node.edges, edge_states):
+        if edge.value != old_state:
+            node_list.append(edge.other(node))
+    return node_list
+
+
+def vertical_rule_list(node):
+    """ Explicitly applies the vertical rule for the edge's other node. Returns a list of nodes that the propagation
+    has changed enough that they may be interesting.
+    """
+    return relevant_rule_list(node.vertical().other(node))
+
+
+def left_rule_list(node):
+    """ The article's L-rule.  Applies the rule for a node to propagate its left edge. Returns a list of nodes that the
+    propagation has changed enough that they may be interesting.
+    """
+    if node.type == Node.NodeType.EDGE or node.left().value != '?':
+        return []
+    else:
+        v_list = vertical_rule_list(node)
+        node_list = relevant_rule_list(node)
+        if v_list and node.vertical().other(node) in node_list:
+            pass
+            # Vertical propagation happened, the vertical edge's other node is not interesting.
+            node_list.remove(node.vertical().other(node))
+        if node_list and node in v_list:
+            pass
+            # Node propagation happened, the node itself is not interesting any more.
+            v_list.remove(node)
+        return v_list + node_list
+
+
+def right_rule_list(node):
+    """ The article's R-rule.  Applies the rule for a node to propagate its right edge. Returns a list of nodes that the
+    propagation has changed enough that they may be interesting.
+    """
+    if node.type == Node.NodeType.EDGE or node.right().value != '?':
+        return []
+    else:
+        v_list = vertical_rule_list(node)
+        node_list = relevant_rule_list(node)
+        if v_list and node.vertical().other(node) in node_list:
+            pass
+            # Vertical propagation happened, the vertical edge's other node is not interesting.
+            node_list.remove(node.vertical().other(node))
+        if node_list and node in v_list:
+            pass
+            # Node propagation happened, the node itself is not interesting any more.
+            v_list.remove(node)
+        return v_list + node_list

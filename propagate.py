@@ -1,5 +1,5 @@
 """ Module for the various strategies of belief propagation. """
-from rules import relevant_rule, left_rule, right_rule
+from rules import relevant_rule, left_rule, right_rule, left_rule_list, right_rule_list
 from graph import Node
 
 
@@ -68,36 +68,28 @@ def flooding_propagate(graph, stopping_condition):
     Returns the amount of steps (left or right) that the propagation took, or None if the propagation failed.
     """
     counter = Counter()
-    newly_set_edges = []
+    interesting_nodes = []
     for node in graph.start_nodes:
         for edge in node.edges:
-            newly_set_edges.append(edge)
+            interesting_nodes.append(edge.other(node))
     for node in graph.end_nodes:
         for edge in node.edges:
-            newly_set_edges.append(edge)
+            interesting_nodes.append(edge.other(node))
     while not stopping_condition(graph):
         nodes_to_update = []
         counter.parallel_steps += 1
-        old_states = [(edge, edge.value) for edge in graph.edges]
         for node in graph.inner_nodes:
-            is_node_interesting = False
-            for edge in newly_set_edges:
-                if node in edge.nodes or node.vertical().other(node) in edge.nodes:
-                    is_node_interesting = True
-            if not is_node_interesting:
+            add_value = (node not in interesting_nodes) + 1
+            if not (node in interesting_nodes or node.vertical().other(node) in interesting_nodes):
                 continue
             # Add node to a list of nodes to update to mock the parallel execution of the rule checks.
-            counter.steps += 2
-            if left_rule(node, apply_propagate=False) or right_rule(node, apply_propagate=False):
+            counter.steps += add_value  # We know the rule since we know from where the counter was updated.
+            if right_rule(node, apply_propagate=False) or left_rule(node, apply_propagate=False):
                 nodes_to_update.append(node)
+        interesting_nodes = []
         for node in nodes_to_update:
-            left_rule(node)
-            right_rule(node)
-        new_states = [(edge, edge.value) for edge in graph.edges]
-        newly_set_edges = []
-        for old_state, new_state in zip(old_states, new_states):
-            if old_state[1] != new_state[1]:
-                newly_set_edges.append(old_state[0])
+            interesting_nodes += left_rule_list(node)
+            interesting_nodes += right_rule_list(node)
     return counter
 
 
@@ -133,7 +125,7 @@ def scheduling_round_trip_propagate(graph, stopping_condition):
     """
     counter = Counter()
     while not stopping_condition(graph):
-        for layer in graph.inner_layers():
+        for layer in graph.inner_layers()[::-1]:
             counter.parallel_steps += 1
             nodes_to_update = []
             for node in layer:
