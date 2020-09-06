@@ -87,8 +87,9 @@ def perform_average_computation_all(k, p):
     )
 
 
-def plot_graph(name, k, results):
+def plot_graph(name, k, p_skip, results):
     passed_amounts = [i for i in range(2 ** k + 1)]
+    passed_amounts = passed_amounts[::p_skip]
     fig, (step, parallel_step) = plt.subplots(2, 1)
     step.plot(passed_amounts, [result.naive_result.steps for result in results], 'r', label='Naive propagation')
     step.plot(passed_amounts, [result.flooding_result.steps for result in results], 'k', label='Flooding propagation')
@@ -131,21 +132,24 @@ def print_average_result_all(k, dbg=False):
         results.append(perform_average_computation_all(k, prob))
         if dbg:
             results[-1].print()
-    plot_graph('Polar encoding with block size {}'.format(2 ** k), k, results)
+    plot_graph('Polar decoding with block size {}'.format(2 ** k), k, 1, results)
 
 
-def print_average_result_random(k, repeats, dbg=False):
+def print_average_result_random(k, repeats, p_skip=1, dbg=False):
     """ Outputs the average step amount dependent on probabilities that generate different amounts of frozen bits. """
     results = []
-    probs = get_p_list(k)
+    probs = get_p_list(k)[::p_skip]
+    print(probs, '\n', len(probs))
     for prob in probs:
+        print(prob)
         results.append(perform_average_computation_random(k, prob, repeats))
         if dbg:
             results[-1].print()
-    plot_graph('Polar encoding with block size {}, {} runs'.format(2 ** k, repeats), k, results)
+    plot_graph('Polar decoding with block size {}, {} runs'.format(2 ** k, repeats), k, p_skip, results)
 
 
 if __name__ == '__main__':
     print(datetime.now())
     print_average_result_all(3)
-    print_average_result_random(5, repeats=100)
+    print_average_result_random(5, repeats=200)
+    print_average_result_random(8, repeats=200, p_skip=1)
